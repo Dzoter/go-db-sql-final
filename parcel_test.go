@@ -34,10 +34,7 @@ func getTestParcel() Parcel {
 func TestAddGetDelete(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	require.NoError(t, err)
 	defer db.Close()
 
 	store := NewParcelStore(db)
@@ -53,10 +50,7 @@ func TestAddGetDelete(t *testing.T) {
 	p, err := store.Get(number)
 	require.NoError(t, err)
 	// проверьте, что значения всех полей в полученном объекте совпадают со значениями полей в переменной parcel
-	require.Equal(t, p.Client, parcel.Client)
-	require.Equal(t, p.CreatedAt, parcel.CreatedAt)
-	require.Equal(t, p.Status, parcel.Status)
-	require.Equal(t, p.Address, parcel.Address)
+	assertEqualParcels(t, p, parcel)
 	// delete
 	// удалите добавленную посылку, убедитесь в отсутствии ошибки
 	err = store.Delete(number)
@@ -71,10 +65,7 @@ func TestAddGetDelete(t *testing.T) {
 func TestSetAddress(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	require.NoError(t, err)
 	defer db.Close()
 
 	store := NewParcelStore(db)
@@ -102,10 +93,7 @@ func TestSetAddress(t *testing.T) {
 func TestSetStatus(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	require.NoError(t, err)
 	defer db.Close()
 
 	store := NewParcelStore(db)
@@ -133,10 +121,7 @@ func TestSetStatus(t *testing.T) {
 func TestGetByClient(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	require.NoError(t, err)
 	defer db.Close()
 
 	store := NewParcelStore(db)
@@ -179,7 +164,8 @@ func TestGetByClient(t *testing.T) {
 	//check
 	for _, parcel := range storedParcels {
 		// в parcelMap лежат добавленные посылки, ключ - идентификатор посылки, значение - сама посылка
-		checkP := parcelMap[parcel.Number]
+		checkP, exist := parcelMap[parcel.Number]
+		require.True(t, exist)
 		// убедитесь, что все посылки из storedParcels есть в parcelMap
 		delete(parcelMap, parcel.Number)
 		// убедитесь, что значения полей полученных посылок заполнены верно
@@ -187,4 +173,9 @@ func TestGetByClient(t *testing.T) {
 	}
 	// убедитесь, что все посылки из storedParcels есть в parcelMap
 	require.Empty(t, parcelMap)
+}
+
+func assertEqualParcels(t *testing.T, expected, actual Parcel) {
+	actual.Number = expected.Number
+	require.Equal(t, expected, actual)
 }

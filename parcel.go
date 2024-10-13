@@ -74,32 +74,32 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 }
 
 func (s ParcelStore) SetStatus(number int, status string) error {
-	parcel, err := s.Get(number)
-	if err != nil {
-		return err
-	}
-	_, err = s.db.Exec("UPDATE parcel SET status = :status WHERE number = :number",
-		sql.Named("number", parcel.Number),
+	res, err := s.db.Exec("UPDATE parcel SET status = :status WHERE number = :number",
+		sql.Named("number", number),
 		sql.Named("status", status))
 	if err != nil {
 		return err
 	}
+
+	cnt, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if cnt == 0 {
+		return fmt.Errorf("no parcel found with number: %d", number)
+	}
+
 	return nil
 }
 
 func (s ParcelStore) SetAddress(number int, address string) error {
 	// реализуйте обновление адреса в таблице parcel
-	parcel, err := s.Get(number)
-	if err != nil {
-		return err
-	}
-	if parcel.Status != ParcelStatusRegistered {
-		return fmt.Errorf("parcel with number %d is not registered status", number)
-	}
+
 	// менять адрес можно только если значение статуса registered
-	_, err = s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number",
+	_, err := s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number AND status = :status",
 		sql.Named("address", address),
-		sql.Named("number", number))
+		sql.Named("number", number),
+		sql.Named("status", ParcelStatusRegistered))
 	if err != nil {
 		return err
 	}
@@ -109,15 +109,13 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 func (s ParcelStore) Delete(number int) error {
 	// реализуйте удаление строки из таблицы parcel
 	// удалять строку можно только если значение статуса registered
-	parcel, err := s.Get(number)
+
+	_, err := s.db.Exec("DELETE FROM parcel WHERE number = :number AND status = :status",
+		sql.Named("number", number),
+		sql.Named("status", ParcelStatusRegistered))
+
 	if err != nil {
 		return err
-	}
-	if parcel.Status == ParcelStatusRegistered {
-		_, err = s.db.Exec("DELETE FROM parcel WHERE number = :number", sql.Named("number", parcel.Number))
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
